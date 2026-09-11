@@ -4,8 +4,7 @@ metadata:
   name: ai-agent-data
   namespace: ai-lab
 spec:
-  accessModes:
-    - ReadWriteOnce
+  accessModes: ["ReadWriteOnce"]
   resources:
     requests:
       storage: 1Gi

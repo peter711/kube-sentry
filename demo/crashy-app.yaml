@@ -6,21 +6,13 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:
-      app: crashy-app
+    matchLabels: {app: crashy-app}
   template:
     metadata:
-      labels:
-        app: crashy-app
+      labels: {app: crashy-app}
     spec:
       containers:
         - name: app
           image: busybox:1.36
           command: ["sh", "-c"]
-          args:
-            - |
-              echo "Starting application"
-              echo "FATAL: cannot resolve DATABASE_HOST=db.invalid"
-              echo "Application will exit with status 1"
-              sleep 2
-              exit 1
+          args: ["echo 'FATAL: cannot resolve DATABASE_HOST=db.invalid'; exit 1"]

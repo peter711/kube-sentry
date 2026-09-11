@@ -1,0 +1,232 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-ai-agent-dashboard
+  namespace: ai-lab
+data:
+  ai-agent.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Agent requests (24h)",
+          "id": 1,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(ai_agent_requests_total[24h]))",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "type": "stat",
+          "title": "LLM calls (24h)",
+          "id": 2,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(ai_agent_llm_requests_total[24h]))",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 6,
+            "y": 0
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Repair verified (24h)",
+          "id": 3,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(ai_agent_repair_operations_total{status=\"verified\"}[24h]))",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 12,
+            "y": 0
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Repair failed (24h)",
+          "id": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(increase(ai_agent_repair_operations_total{status=\"failed\"}[24h]))",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 18,
+            "y": 0
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Tool calls by tool",
+          "id": 5,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum by (tool_name) (rate(ai_agent_tool_calls_total[$__rate_interval]))",
+              "legendFormat": "{{tool_name}}",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 5
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Tool latency p95",
+          "id": 6,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le, tool_name) (rate(ai_agent_tool_duration_seconds_bucket[$__rate_interval])))",
+              "legendFormat": "{{tool_name}}",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 5
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "LLM tokens",
+          "id": 7,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum by (direction) (rate(ai_agent_llm_tokens_total[$__rate_interval]))",
+              "legendFormat": "{{direction}}",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 13
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "LLM latency p95",
+          "id": 8,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(ai_agent_llm_duration_seconds_bucket[$__rate_interval])))",
+              "legendFormat": "p95",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 13
+          }
+        },
+        {
+          "type": "traces",
+          "title": "Recent agent traces",
+          "id": 9,
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "targets": [
+            {
+              "queryType": "traceql",
+              "query": "{ resource.service.name = \"ai-agent-api\" || resource.service.name = \"ai-agent-worker\" }",
+              "refId": "A"
+            }
+          ],
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 21
+          }
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 41,
+      "tags": [
+        "ai-agent",
+        "opentelemetry",
+        "kubernetes"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timezone": "browser",
+      "title": "AI Kubernetes Agent Observability",
+      "uid": "ai-k8s-agent-observability",
+      "version": 1
+    }

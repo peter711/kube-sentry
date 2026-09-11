@@ -32,6 +32,12 @@ spec:
               value: /data/agent.db
             - name: WORKER_IMAGE
               value: ai-agent:dev
+            - name: OTEL_SERVICE_NAME
+              value: ai-agent-api
+            - name: SERVICE_VERSION
+              value: 0.6.0
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector:4317
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -41,22 +47,14 @@ spec:
             - name: agent-data
               mountPath: /data
           resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
+            requests: {cpu: 100m, memory: 160Mi}
+            limits: {cpu: 600m, memory: 640Mi}
           readinessProbe:
-            httpGet:
-              path: /health
-              port: http
+            httpGet: {path: /health, port: http}
             initialDelaySeconds: 2
             periodSeconds: 5
           livenessProbe:
-            httpGet:
-              path: /health
-              port: http
+            httpGet: {path: /health, port: http}
             initialDelaySeconds: 10
             periodSeconds: 10
           securityContext:

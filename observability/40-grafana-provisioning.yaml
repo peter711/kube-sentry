@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: ai-lab
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo:3200
+        editable: false
+        jsonData:
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: -2m
+            spanEndTimeShift: 2m
+            tags:
+              - key: service.name
+                value: service_name
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: ai-lab
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: ai-agent
+        orgId: 1
+        folder: AI Kubernetes Agent
+        type: file
+        disableDeletion: true
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards

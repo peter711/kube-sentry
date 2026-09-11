@@ -1,10 +1,11 @@
-#!/usr/bin/env sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
-k3d cluster create ai-lab \
-  --servers 1 \
-  --agents 1 \
-  -p "127.0.0.1:8080:80@loadbalancer"
+if k3d cluster list 2>/dev/null | grep -q '^ai-lab '; then
+  echo "Cluster ai-lab already exists."
+  exit 0
+fi
 
-kubectl wait --for=condition=Ready nodes --all --timeout=120s
-kubectl get nodes -o wide
+k3d cluster create ai-lab   --servers 1   --agents 1   -p '127.0.0.1:8080:80@loadbalancer'   --wait
+
+kubectl cluster-info

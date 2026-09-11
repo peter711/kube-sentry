@@ -5,16 +5,13 @@ metadata:
   namespace: ai-lab
 spec:
   replicas: 1
+  progressDeadlineSeconds: 20
   selector:
-    matchLabels:
-      app: broken-nginx
+    matchLabels: {app: broken-nginx}
   template:
     metadata:
-      labels:
-        app: broken-nginx
+      labels: {app: broken-nginx}
     spec:
       containers:
         - name: nginx
           image: nginx:alpine
-          ports:
-            - containerPort: 80

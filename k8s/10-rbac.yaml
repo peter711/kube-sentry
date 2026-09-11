@@ -17,26 +17,16 @@ metadata:
   namespace: ai-lab
 rules:
   - apiGroups: [""]
-    resources:
-      - pods
-      - events
-      - services
+    resources: ["pods", "events", "services"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
-    resources:
-      - pods/log
+    resources: ["pods/log"]
     verbs: ["get"]
   - apiGroups: ["apps"]
-    resources:
-      - deployments
-      - replicasets
-      - statefulsets
-      - daemonsets
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["batch"]
-    resources:
-      - jobs
-      - jobs/status
+    resources: ["jobs"]
     verbs: ["create", "get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -46,18 +36,13 @@ metadata:
   namespace: ai-lab
 rules:
   - apiGroups: [""]
-    resources:
-      - pods
-      - events
+    resources: ["pods", "events"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
-    resources:
-      - deployments
-      - replicasets
+    resources: ["deployments", "replicasets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
-    resources:
-      - deployments
+    resources: ["deployments"]
     verbs: ["patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

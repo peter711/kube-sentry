@@ -1,4 +1,4 @@
-# AI Kubernetes Lab
+# Kube Sentry
 
 A local k3d/K3s lab for building a **constrained AI agent** that diagnoses and
 repairs workloads in a Kubernetes namespace. The project is built in
@@ -6,7 +6,7 @@ incremental stages, from a simple read-only chat-with-your-cluster agent to a
 fully observable, asynchronous, human-in-the-loop repair pipeline with a
 React operator console.
 
-Current version: **Stage 7 / 0.6.0** (backend), UI `0.7.0.2`.
+Current version: **0.6.0** (backend), UI `0.7.0.2`.
 
 ## Table of contents
 

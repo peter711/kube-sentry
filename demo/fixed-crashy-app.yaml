@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crashy-app
+  namespace: ai-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crashy-app
+  template:
+    metadata:
+      labels:
+        app: crashy-app
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "Starting application"
+              echo "DATABASE_HOST resolved successfully"
+              while true; do
+                echo "healthy"
+                sleep 60
+              done

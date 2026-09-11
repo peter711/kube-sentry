@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-agent-ui
+  namespace: ai-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-agent-ui
+  template:
+    metadata:
+      labels:
+        app: ai-agent-ui
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ui
+          image: ai-agent-ui:dev
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nginx-tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-agent-ui
+  namespace: ai-lab
+spec:
+  selector:
+    app: ai-agent-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-agent-ui
+  namespace: ai-lab
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /ui
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-agent-ui
+                port:
+                  number: 80

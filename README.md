@@ -97,9 +97,9 @@ agent/            FastAPI agent (app.py), agent tools (tools.py), async repair w
 ui/               React 19 + TypeScript + Vite operator console
 k8s/              Namespace, RBAC, PVC, Deployment/Service/Ingress manifests
 observability/    OpenTelemetry Collector, Tempo, Prometheus, Grafana manifests
-evals/            Deterministic agent evals (offline fakes + DeepEval metrics)
-scripts/          create-cluster.sh, deploy.sh, deploy-ui.sh, rebuild.sh, test-observability.sh, run-evals.sh
-demo/             Sample broken/fixed Deployments used to exercise the agent
+evals/            Deterministic agent evals (offline fakes + live HTTP target + DeepEval metrics)
+scripts/          create-cluster.sh, deploy.sh, deploy-ui.sh, rebuild.sh, test-observability.sh, run-evals.sh, run-evals-live.sh
+demo/             Sample broken/healthy/fixed Deployments used to exercise the agent and seed live evals
 ```
 
 ## Prerequisites
@@ -156,12 +156,13 @@ Every common task is wrapped in a self-documenting `Makefile`. Run `make` (or
 make install        # Python (agent + evals) and UI dependencies
 make deploy-all     # create cluster, deploy agent + observability + UI
 make evals          # run the deterministic offline eval suite
+make evals-live     # run the live evals against the deployed agent
 make lint           # Python byte-compile + UI typecheck
 make cluster-delete # tear the cluster down
 ```
 
 Handy overrides: `make ask Q="Why is crashy-app restarting?"`,
-`make evals-filter K=proposal`, `make logs-agent`,
+`make evals-filter K=proposal`, `make evals-live-repair`, `make logs-agent`,
 `make port-forward-prometheus`.
 
 ## Repair lifecycle
@@ -302,6 +303,13 @@ kubectl -n ai-lab rollout status deploy/crashy-app
 ```bash
 kubectl apply -f demo/fixed-nginx.yaml
 kubectl -n ai-lab rollout status deploy/broken-nginx
+```
+
+**Healthy workload (used by the live evals):**
+
+```bash
+kubectl apply -f demo/healthy-web.yaml
+kubectl -n ai-lab rollout status deploy/web
 ```
 
 ## RBAC verification
@@ -450,11 +458,12 @@ Open `http://localhost:5173/ui/`. Vite proxies API calls to
 
 ## Evals
 
-Stage 8 adds a deterministic eval suite under `evals/`. It runs the real agent
-loop, tools and repair worker against in-memory Kubernetes fakes and a scripted
-model, so it needs **no cluster and no OpenAI API key** and completes in about a
-second. Grading is deterministic (tool calls, arguments, proposal rows, regex
-evidence, no-mutation invariants) using custom DeepEval metrics - no LLM judge.
+Stages 8-9 add a deterministic eval suite under `evals/`, split into two layers
+that share the same grading code (custom DeepEval metrics, no LLM judge).
+
+**Offline** (Stage 8) runs the real agent loop, tools and repair worker against
+in-memory Kubernetes fakes and a scripted model, so it needs **no cluster and no
+OpenAI API key** and completes in about a second.
 
 ```bash
 python3 -m venv .venv
@@ -462,15 +471,23 @@ python3 -m venv .venv
 ./scripts/run-evals.sh            # writes evals/reports/<timestamp>.{json,md}
 ```
 
+**Live** (Stage 9) talks to the deployed agent over HTTP with a real model,
+seeds real workloads into the disposable `ai-lab` namespace, and exercises the
+full propose → approve → apply → verify path. It needs a running cluster and
+agent:
+
+```bash
+./scripts/run-evals-live.sh                 # all live cases
+./scripts/run-evals-live.sh -k diagnosis    # read-only cases only
+./scripts/run-evals-live.sh -m "live and not live_repair"
+```
+
 Covered invariants include: required/forbidden tool selection, correct proposal
 action/payload, rejection of no-op and out-of-range proposals, namespace
 confinement, secret redaction, prompt-injection text treated as data, the agent
-never issuing a Kubernetes write, and the worker's stale/no-op/rollback
-lifecycle. See [`evals/README.md`](evals/README.md) for the full layout and how
-to add cases.
-
-A live layer (real k3d cluster + real model, `@pytest.mark.live`) is planned but
-not implemented yet.
+never issuing a Kubernetes write (live: `snapshot_unchanged_metric`), and the
+worker's stale/no-op/rollback lifecycle. See [`evals/README.md`](evals/README.md)
+for the full layout and how to add cases.
 
 ## Development history (stages)
 
@@ -488,6 +505,7 @@ The project was built incrementally; each stage is summarized below.
 | 6     | OpenTelemetry traces/metrics across API and worker with shared trace context; OTel Collector, Tempo, Prometheus, Grafana added; strict privacy rule on span content |
 | 7     | React operator console (Agent, Proposals, Operations, Audit screens) served same-origin behind Traefik; non-root/read-only nginx runtime fix (7.0.2) |
 | 8     | Deterministic offline eval suite (DeepEval metrics, fake Kubernetes + scripted model); injected-client testability seam; worker rollout predicate extracted |
+| 9     | Live eval layer: stdlib HTTP target, kubectl seeding/reset of demo workloads, real-model diagnosis + proposal cases, and a full human-approved repair roundtrip (propose → approve → worker patch → verified) |
 
 ## Production notes / known lab limitations
 

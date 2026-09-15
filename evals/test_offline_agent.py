@@ -7,10 +7,11 @@ from pathlib import Path
 import pytest
 import yaml
 from deepeval import assert_test
-from deepeval.test_case import LLMTestCase, ToolCall
+from deepeval.test_case import LLMTestCase
 
 from fakes.fake_openai import call, calls_step
 from fakes.scenarios import Scenario, build
+from grading import to_test_case
 from metrics.deterministic import (
     answer_non_empty_metric,
     evidence_metric,
@@ -24,14 +25,7 @@ DATASET = yaml.safe_load((Path(__file__).parent / "datasets" / "offline_agent.ya
 
 
 def _test_case(result) -> LLMTestCase:
-    return LLMTestCase(
-        input=result.question,
-        actual_output=result.answer,
-        tools_called=[
-            ToolCall(name=entry["tool"], input_parameters=entry["arguments"])
-            for entry in result.tool_calls
-        ],
-    )
+    return to_test_case(result)
 
 
 @pytest.mark.parametrize("case", DATASET, ids=[case["name"] for case in DATASET])

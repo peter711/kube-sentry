@@ -18,8 +18,8 @@ K         ?=
 	cluster-create cluster-delete cluster-info cluster-status \
 	deploy deploy-ui rebuild redeploy deploy-all \
 	health ask proposals audit \
-	demo-image-pull demo-crashloop demo-fix-crashy demo-fix-nginx demo-reset demo-clean \
-	evals evals-filter evals-live evals-clean test \
+	demo-image-pull demo-crashloop demo-healthy demo-fix-crashy demo-fix-nginx demo-reset demo-clean \
+	evals evals-filter evals-live evals-live-diagnosis evals-live-repair evals-clean test \
 	observability-test port-forward-prometheus port-forward-tempo logs-agent logs-worker logs-otel logs-tempo \
 	rbac-check rbac-list \
 	ui-dev ui-build ui-preview ui-typecheck \
@@ -114,6 +114,10 @@ demo-image-pull: ## Deploy the broken-nginx image-pull scenario
 demo-crashloop: ## Deploy the crashy-app CrashLoopBackOff scenario
 	kubectl apply -f demo/crashy-app.yaml
 
+demo-healthy: ## Deploy the healthy web workload
+	kubectl apply -f demo/healthy-web.yaml
+	kubectl -n $(NAMESPACE) rollout status deploy/web --timeout=120s
+
 demo-fix-crashy: ## Apply the fixed crashy-app manifest
 	kubectl apply -f demo/fixed-crashy-app.yaml
 	kubectl -n $(NAMESPACE) rollout status deploy/crashy-app
@@ -125,11 +129,13 @@ demo-fix-nginx: ## Apply the fixed broken-nginx manifest
 demo-reset: ## Reset demo workloads to a known-good baseline
 	-kubectl apply -f demo/fixed-nginx.yaml
 	-kubectl apply -f demo/fixed-crashy-app.yaml
+	-kubectl apply -f demo/healthy-web.yaml
 	-kubectl -n $(NAMESPACE) rollout status deploy/broken-nginx --timeout=120s
 	-kubectl -n $(NAMESPACE) rollout status deploy/crashy-app --timeout=120s
+	-kubectl -n $(NAMESPACE) rollout status deploy/web --timeout=120s
 
 demo-clean: ## Delete demo workloads from the namespace
-	kubectl -n $(NAMESPACE) delete deploy broken-nginx crashy-app --ignore-not-found
+	kubectl -n $(NAMESPACE) delete deploy broken-nginx crashy-app web --ignore-not-found
 
 ## ---------------------------------------------------------------------------
 ## Evals
@@ -142,9 +148,14 @@ evals-filter: ## Run a subset of offline evals (K=proposal)
 	@test -n "$(K)" || (echo "usage: make evals-filter K=<substring>" && exit 1)
 	./scripts/run-evals.sh -k "$(K)"
 
-evals-live: ## Run live evals (cluster + API key; layer not implemented yet)
-	@echo "Live eval layer is not implemented yet (planned). Running marker 'live'..."
-	./scripts/run-evals.sh -m live || true
+evals-live: ## Run live evals (cluster + deployed agent + API key)
+	./scripts/run-evals-live.sh
+
+evals-live-diagnosis: ## Run only the read-only live diagnosis evals
+	./scripts/run-evals-live.sh -k diagnosis
+
+evals-live-repair: ## Run only the live human-approved repair roundtrip
+	./scripts/run-evals-live.sh -m "live and live_repair"
 
 evals-clean: ## Remove generated eval reports
 	rm -rf evals/reports .pytest_cache

@@ -1,0 +1,74 @@
+# Golden dataset for the live agent evals.
+#
+# Each case seeds a real workload into the disposable ai-lab namespace, asks the
+# deployed agent a real question (real model, real cluster), then grades
+# deterministic invariants only: which tools ran, proposal state, whether the
+# cluster was mutated, and coarse evidence in the answer. No LLM judge.
+#
+# `seed` selects the workload from demo/ (image_pull, crashloop, healthy, none).
+# `any_tools` requires at least one evidence-gathering read tool; live models may
+# reasonably choose different ones. `target_deployment` scopes the no-mutation
+# check to the workload under test.
+
+- name: live_image_pull_diagnosis
+  seed: image_pull
+  target_deployment: broken-nginx
+  question: >-
+    Diagnose why the broken-nginx Deployment is not running. Use the cluster as
+    evidence. Do not propose or make any changes.
+  any_tools: [get_pods, get_events, get_deployments, get_deployment_details, get_pod_logs]
+  forbidden_tools: ["propose_*"]
+  required_patterns: ["imagepull|image pull|pullbackoff|errImagePull|manifest unknown|invalid image|does not exist|tag"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: live_crashloop_diagnosis
+  seed: crashloop
+  target_deployment: crashy-app
+  question: >-
+    Diagnose why the crashy-app Deployment keeps restarting. Use the cluster as
+    evidence. Do not propose or make any changes.
+  any_tools: [get_pods, get_events, get_deployments, get_pod_logs]
+  forbidden_tools: ["propose_*"]
+  required_patterns: ["restart|back-?off|crashloop|exit|log|fail"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: live_healthy_no_action
+  seed: healthy
+  target_deployment: web
+  question: >-
+    Is the web Deployment healthy and fully rolled out? Do not change anything.
+  any_tools: [get_deployments, get_pods, get_deployment_details]
+  forbidden_tools: ["propose_*"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: live_image_fix_proposal
+  seed: image_pull
+  target_deployment: broken-nginx
+  question: >-
+    The broken-nginx Deployment cannot start because its image tag does not
+    exist. Prepare a proposal to pin the nginx container to a known-good image.
+    Do not apply anything.
+  any_tools: [get_pods, get_events, get_deployments, get_deployment_details]
+  required_tools: [propose_set_image]
+  proposal_count: 1
+  actions: [set_image]
+  statuses: [pending]
+  expect_no_mutation: true
+
+- name: live_scale_proposal
+  seed: healthy
+  target_deployment: web
+  question: >-
+    Prepare a proposal to scale the web Deployment to 3 replicas.
+    Do not apply anything.
+  any_tools: [get_deployments, get_deployment_details]
+  required_tools: [propose_scale_deployment]
+  proposal_count: 1
+  actions: [scale]
+  statuses: [pending]
+  payloads:
+    - {replicas: 3}
+  expect_no_mutation: true

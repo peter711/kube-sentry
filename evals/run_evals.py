@@ -4,13 +4,14 @@
 Usage:
     python evals/run_evals.py                 # all offline evals
     python evals/run_evals.py -k proposal     # filter by test id substring
-    python evals/run_evals.py -m live         # live evals (not implemented yet)
+    python evals/run_evals.py -m live         # live evals (cluster + deployed agent)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -93,7 +94,7 @@ def _write_report(results: list[dict[str, Any]], duration: float, exit_code: int
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parse_args(argv if argv is not None else [])
+    args = _parse_args(sys.argv[1:] if argv is None else argv)
 
     plugin = _ReportPlugin()
     pytest_args = [str(EVALS_DIR), "-v", "-m", args.marker, "-p", "no:cacheprovider"]

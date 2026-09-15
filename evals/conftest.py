@@ -31,6 +31,36 @@ import pytest  # noqa: E402
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "live: requires a running cluster and a real model")
+    config.addinivalue_line(
+        "markers",
+        "live_repair: live eval that approves a proposal and mutates the disposable ai-lab namespace",
+    )
+
+
+LIVE_AGENT_URL = os.getenv("EVAL_AGENT_URL", os.getenv("AGENT_URL", "http://localhost:8080"))
+
+
+@pytest.fixture(scope="session")
+def live_target():
+    """HTTP client for the deployed agent; skips the live suite if unreachable."""
+    from live.http_target import HttpTarget
+
+    target = HttpTarget(LIVE_AGENT_URL)
+    if not target.available():
+        pytest.skip(f"live agent not reachable at {LIVE_AGENT_URL}")
+    return target
+
+
+@pytest.fixture
+def live_cluster():
+    """Real cluster access for seeding; resets demo workloads after each test."""
+    from live.cluster import LiveCluster
+
+    cluster = LiveCluster()
+    if not cluster.available():
+        pytest.skip("kubectl cannot reach the ai-lab namespace")
+    yield cluster
+    cluster.reset()
 
 
 @pytest.fixture

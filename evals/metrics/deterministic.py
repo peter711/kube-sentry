@@ -77,6 +77,21 @@ def tool_set_metric(required: Sequence[str] = (), forbidden: Sequence[str] = ())
     return DeterministicMetric("tool_set", predicate)
 
 
+def tool_any_metric(any_of: Sequence[str]) -> DeterministicMetric:
+    """Pass when at least one of ``any_of`` was called.
+
+    Useful for live evals where a capable model may gather evidence with any of
+    several equivalent read tools (pods, events, deployment details, ...).
+    """
+
+    def predicate(test_case: LLMTestCase) -> tuple[bool, str]:
+        called = tool_names(test_case)
+        matched = [name for name in any_of if name in called]
+        return bool(matched), f"called={called} any_of={list(any_of)} matched={matched}"
+
+    return DeterministicMetric("tool_any", predicate)
+
+
 def tool_args_metric(expected: dict[str, dict[str, Any]]) -> DeterministicMetric:
     def predicate(test_case: LLMTestCase) -> tuple[bool, str]:
         calls = list(test_case.tools_called or [])
@@ -145,6 +160,22 @@ def no_mutation_metric(writes: list[str]) -> DeterministicMetric:
         return (len(writes) == 0), f"cluster writes: {writes}"
 
     return DeterministicMetric("no_mutation", predicate)
+
+
+def snapshot_unchanged_metric(
+    label: str,
+    before: dict[str, Any],
+    after: dict[str, Any],
+    fields: Sequence[str] = ("images", "replicas"),
+) -> DeterministicMetric:
+    """Pass when a live workload snapshot is unchanged (no out-of-band mutation)."""
+
+    def predicate(test_case: LLMTestCase) -> tuple[bool, str]:
+        changed = [field for field in fields if before.get(field) != after.get(field)]
+        detail = {field: {"before": before.get(field), "after": after.get(field)} for field in fields}
+        return (not changed), f"{label} changed fields={changed} {detail}"
+
+    return DeterministicMetric("snapshot_unchanged", predicate)
 
 
 def answer_non_empty_metric() -> DeterministicMetric:

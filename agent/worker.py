@@ -91,6 +91,18 @@ def deployment_related_pods(deployment_name: str) -> list[dict[str, Any]]:
     return related
 
 
+def rollout_is_healthy(snapshot: dict[str, Any]) -> bool:
+    desired = snapshot["replicas"] or 0
+    return (
+        snapshot["observed_generation"] >= snapshot["generation"]
+        and snapshot["current_replicas"] == desired
+        and snapshot["updated_replicas"] == desired
+        and snapshot["ready_replicas"] == desired
+        and snapshot["available_replicas"] == desired
+        and snapshot["unavailable_replicas"] == 0
+    )
+
+
 def wait_for_rollout(deployment_name: str) -> dict[str, Any]:
     _, apps = api_clients()
     overall_started = time.perf_counter()
@@ -106,20 +118,11 @@ def wait_for_rollout(deployment_name: str) -> dict[str, Any]:
                     dep = apps.read_namespaced_deployment(deployment_name, NAMESPACE)
                     snap = deployment_snapshot(dep)
                     last_snapshot = snap
-                    desired = snap["replicas"] or 0
                     span.set_attribute("ai.lab.rollout.current_replicas", snap["current_replicas"])
                     span.set_attribute("ai.lab.rollout.ready_replicas", snap["ready_replicas"])
                     span.set_attribute("ai.lab.rollout.updated_replicas", snap["updated_replicas"])
                     span.set_attribute("ai.lab.rollout.unavailable_replicas", snap["unavailable_replicas"])
-                    healthy = (
-                        snap["observed_generation"] >= snap["generation"]
-                        and snap["current_replicas"] == desired
-                        and snap["updated_replicas"] == desired
-                        and snap["ready_replicas"] == desired
-                        and snap["available_replicas"] == desired
-                        and snap["unavailable_replicas"] == 0
-                    )
-                    if healthy:
+                    if rollout_is_healthy(snap):
                         status = "healthy"
                         span.set_attribute("ai.lab.rollout.healthy", True)
                         return {"status":"healthy","reason":"Deployment rollout completed.","snapshot":snap,"pods_observed":deployment_related_pods(deployment_name)}

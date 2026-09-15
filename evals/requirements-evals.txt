@@ -1,0 +1,6 @@
+# Eval-only dependencies. Install on top of the agent runtime requirements:
+#   python -m venv .venv && .venv/bin/pip install -r evals/requirements-evals.txt
+-r ../agent/requirements.txt
+deepeval>=4,<5
+pytest>=8
+pyyaml>=6

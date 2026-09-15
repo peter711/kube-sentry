@@ -106,8 +106,12 @@ def openai_response(openai_client: OpenAI, **kwargs: Any) -> Any:
             LLM_DURATION.record(elapsed_seconds(started), {"model": MODEL, "status": status})
 
 
-def run_agent(question: str, conversation_id: str) -> tuple[str, list[dict[str, Any]], list[str]]:
-    openai_client = OpenAI()
+def run_agent(
+    question: str,
+    conversation_id: str,
+    openai_client: OpenAI | None = None,
+) -> tuple[str, list[dict[str, Any]], list[str]]:
+    openai_client = openai_client or OpenAI()
     trace_log, proposal_ids = [], []
     history = get_recent_turns(conversation_id)
     response = openai_response(

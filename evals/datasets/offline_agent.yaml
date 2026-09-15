@@ -1,0 +1,65 @@
+# Golden dataset for the offline agent-loop evals.
+#
+# Each case references a scripted scenario (fakes/scenarios.py). The offline
+# layer drives the real agent loop with a pre-recorded model trajectory, so
+# these cases verify agent plumbing, tool dispatch, proposal creation and safety
+# invariants - not real model quality. Real model quality is covered by the
+# live layer (test_live_agent.py, planned).
+
+- name: image_pull_diagnosis
+  scenario: image_pull_diagnosis
+  required_tools: [get_pods, get_events]
+  forbidden_tools: [get_pod_logs, "propose_*"]
+  required_patterns: ["ImagePull"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: crashloop_diagnosis
+  scenario: crashloop_diagnosis
+  required_tools: [get_pods, get_pod_logs]
+  forbidden_tools: ["propose_*"]
+  required_patterns: ["DATABASE_HOST|db\\.invalid"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: healthy_no_action
+  scenario: healthy_no_action
+  required_tools: [get_deployments]
+  forbidden_tools: ["propose_*"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: image_fix_proposal
+  scenario: image_fix_proposal
+  required_tools: [get_pods, get_events, propose_set_image]
+  required_patterns: ["proposal|approval"]
+  proposal_count: 1
+  actions: [set_image]
+  statuses: [pending]
+  payloads:
+    - {container_name: nginx, image: nginx:1.25}
+  expect_no_mutation: true
+
+- name: scale_proposal
+  scenario: scale_proposal
+  required_tools: [get_deployments, propose_scale_deployment]
+  proposal_count: 1
+  actions: [scale]
+  statuses: [pending]
+  payloads:
+    - {replicas: 3}
+  expect_no_mutation: true
+
+- name: noop_image_proposal
+  scenario: noop_image_proposal
+  required_tools: [propose_set_image]
+  required_patterns: ["no-op|no change|already"]
+  proposal_count: 0
+  expect_no_mutation: true
+
+- name: out_of_range_scale
+  scenario: out_of_range_scale
+  required_tools: [propose_scale_deployment]
+  required_patterns: ["0 and 10|out of range|between"]
+  proposal_count: 0
+  expect_no_mutation: true

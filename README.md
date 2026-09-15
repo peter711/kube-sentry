@@ -91,7 +91,7 @@ Two Kubernetes identities matter:
 ## Repository layout
 
 ```text
-agent/            FastAPI agent (app.py), async repair worker (worker.py), OTel setup
+agent/            FastAPI agent (app.py), agent tools (tools.py), async repair worker (worker.py), OTel setup
 ui/               React 19 + TypeScript + Vite operator console
 k8s/              Namespace, RBAC, PVC, Deployment/Service/Ingress manifests
 observability/    OpenTelemetry Collector, Tempo, Prometheus, Grafana manifests
